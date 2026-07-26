@@ -4,6 +4,7 @@ import base64
 import json
 import logging
 import os
+import shutil
 import tempfile
 from workspace import EncryptedWorkspace
 import time
@@ -179,6 +180,21 @@ def create_app() -> Flask:
         video.seek(0)
         return size <= config.max_video_bytes
 
+    def _enable_streaming_for_large_uploads():
+        """Replace large file uploads with streaming versions."""
+        upload_max_bytes = getattr(config, "upload_max_bytes", config.max_video_bytes)
+        if request.content_length and request.content_length > upload_max_bytes:
+            # Store config for streaming file creation
+            g.upload_config = config
+            
+            # Replace file uploads with streaming versions
+            new_files = {}
+            for field_name, field_storage in request.files.items():
+                new_files[field_name] = create_streaming_file_storage(field_storage)
+            
+            # Replace the files in the request
+            request.files = type(request.files)(new_files)
+
     def _enforce_json_size() -> int:
         raw = request.get_data()
         return len(raw) if raw else 0
@@ -186,6 +202,9 @@ def create_app() -> Flask:
     @app.post("/api/stego/embed")
     @require_capacity(admission_controller)
     def embed():
+        # Enable streaming for large uploads
+        _enable_streaming_for_large_uploads()
+        
         video = request.files.get("video")
         metadata_raw = request.form.get("metadata")
         if video is None or metadata_raw is None:
@@ -254,6 +273,9 @@ def create_app() -> Flask:
     @app.post("/api/stego/extract")
     @require_capacity(admission_controller)
     def extract():
+        # Enable streaming for large uploads
+        _enable_streaming_for_large_uploads()
+        
         video = request.files.get("video")
         if video is None:
             return jsonify({"error": "video is required"}), 400
