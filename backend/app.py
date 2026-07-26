@@ -22,6 +22,7 @@ from config import load_config
 from db import (
     check_db,
     database_url,
+    decode_proof_events_cursor,
     find_proof_events_by_video,
     init_db,
     insert_proof_event,
@@ -325,12 +326,21 @@ def create_app() -> Flask:
     @app.get("/api/proofs")
     def proofs():
         limit = request.args.get("limit", "25")
+        cursor_token = request.args.get("cursor")
         try:
             parsed_limit = int(limit)
         except ValueError:
             return jsonify({"error": "limit must be an integer"}), 400
 
-        return jsonify({"ok": True, "events": list_proof_events(parsed_limit)})
+        cursor_id = None
+        if cursor_token is not None and cursor_token != "":
+            try:
+                cursor_id = decode_proof_events_cursor(cursor_token)
+            except ValueError:
+                return jsonify({"error": "invalid cursor"}), 400
+
+        events, next_cursor = list_proof_events(parsed_limit, cursor_id=cursor_id)
+        return jsonify({"ok": True, "events": events, "nextCursor": next_cursor})
 
     @app.get("/api/proofs/by-video/<video_hash>")
     def proof_by_video(video_hash: str):

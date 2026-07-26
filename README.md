@@ -205,10 +205,31 @@ GET  /health
 POST /api/stego/embed
 POST /api/stego/extract
 POST /api/noir/silent-witness
-GET  /api/proofs?limit=25
+GET  /api/proofs?limit=25&cursor=<opaque>
 GET  /api/proofs/by-video/:video_hash
 POST /api/proofs/register
 ```
+
+`GET /api/proofs` uses keyset (cursor) pagination so pages stay stable as new
+evidence events arrive:
+
+- `limit` — page size (default `25`, clamped to `1..100`)
+- `cursor` — optional opaque token from a previous `nextCursor`
+- Ordering — `id DESC` (primary key is the unique tie-breaker)
+- Malformed `cursor` values return HTTP `400` with `{"error":"invalid cursor"}`
+
+Response shape:
+
+```json
+{
+  "ok": true,
+  "events": [ /* up to `limit` proof_events rows */ ],
+  "nextCursor": "opaque-token-or-null"
+}
+```
+
+When `nextCursor` is non-null, pass it as `cursor` on the next request to
+continue. When it is `null`, there are no further pages.
 
 `/api/stego/embed` returns an embedded `video/mp4` artifact. The response
 headers include:
