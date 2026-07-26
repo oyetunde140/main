@@ -1,2 +1,4 @@
 tmp/
 *.log
+config.bat
+node_modules

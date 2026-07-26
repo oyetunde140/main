@@ -1,0 +1,18 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "feat/cursor-pagination-proof-events",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "feat/cursor-pagination-proof-events": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "feat/cursor-pagination-proof-events",
+    "origin"
+  ]
+}
